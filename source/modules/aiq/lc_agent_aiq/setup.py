@@ -32,7 +32,7 @@ install_requires = req_file("requirements.txt")
 
 setup(
     name="lc_agent_aiq",
-    version="0.1.9",
+    version="0.1.10",
     author="NVIDIA",
     author_email="doyopk-org@exchange.nvidia.com",
     description="LC Agent plugin for AgentIQ",
@@ -55,4 +55,4 @@ setup(
             "lc_agent_aiq = lc_agent_aiq.register",
         ],
     },
-) 
+)

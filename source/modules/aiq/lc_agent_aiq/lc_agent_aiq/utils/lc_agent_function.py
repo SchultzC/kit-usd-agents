@@ -84,7 +84,7 @@ class LCAgentFunction(Function[AIQChatRequest, str, str]):
         self.lc_agent_node_gen_name = self.lc_agent_node_name + "Gen"
         self.lc_agent_node_gen_type = lc_agent_node_gen_type
         self.lc_agent_node_kwargs = kwargs
-        
+
         # Ensure description is passed through kwargs to enable proper tool registration
         # for nested multiagent nodes. This allows multiagent nodes to be used as tools
         # by parent multiagent nodes with correct descriptions.
@@ -252,12 +252,60 @@ class LCAgentFunction(Function[AIQChatRequest, str, str]):
         with RunnableNetwork(default_node=self.lc_agent_node_name, chat_model_name=self.chat_model_name) as network:
             # Convert AIQChatRequest messages to LangChain messages
             for msg in input_message.messages:
-                if msg.role == "user":
-                    RunnableHumanNode(msg.content)
-                elif msg.role == "assistant":
-                    RunnableAINode(msg.content)
-                elif msg.role == "system":
-                    system_messages.append(SystemMessage(content=msg.content))
+                # Handle both string and list content
+                if isinstance(msg.content, str):
+                    # Simple string content
+                    if msg.role == "user":
+                        RunnableHumanNode(msg.content)
+                    elif msg.role == "assistant":
+                        RunnableAINode(msg.content)
+                    elif msg.role == "system":
+                        system_messages.append(SystemMessage(content=msg.content))
+                elif isinstance(msg.content, list):
+                    # Complex content - convert back to LangChain format
+                    lc_content = []
+                    for item in msg.content:
+                        if hasattr(item, 'text'):
+                            # Regular TextContent
+                            lc_content.append({"type": "text", "text": item.text})
+                        elif hasattr(item, 'image_url'):
+                            # Check if this is our custom ImageData with base64 data
+                            if hasattr(item.image_url, 'data'):
+                                # ImageData with base64 - extract the data
+                                lc_content.append({
+                                    "type": "image_url",
+                                    "image_url": {"url": item.image_url.data}
+                                })
+                            else:
+                                # Standard ImageContent with URL
+                                lc_content.append({
+                                    "type": "image_url",
+                                    "image_url": {"url": str(item.image_url.url)}
+                                })
+                        else:
+                            # Unknown - convert to text
+                            lc_content.append({"type": "text", "text": str(item)})
+
+                    # Create nodes with complex content
+                    if msg.role == "user":
+                        from langchain_core.messages import HumanMessage
+                        human_msg = HumanMessage(content=lc_content)
+                        # Create a node that outputs this message
+                        from lc_agent import RunnableNode
+                        class MessageNode(RunnableNode):
+                            def __init__(self):
+                                super().__init__()
+                                self.outputs = human_msg
+                        MessageNode()
+                    elif msg.role == "assistant":
+                        from langchain_core.messages import AIMessage
+                        ai_msg = AIMessage(content=lc_content)
+                        from lc_agent import RunnableNode
+                        class MessageNode(RunnableNode):
+                            def __init__(self):
+                                super().__init__()
+                                self.outputs = ai_msg
+                        MessageNode()
 
             # if system_messages:
             #     # Add a node for the system message and LLM processing

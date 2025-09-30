@@ -243,6 +243,52 @@ def search_prims_by_name(
     return result
 
 
+def search_prims_by_annotation(
+    stage: Usd.Stage,
+    annotations: List[str],
+    filter_func: Optional[Callable[[Usd.Prim], bool]] = None,
+    prune_subtree: bool = False,
+) -> List[str]:
+    """
+    Iterates over all prims in the stage and returns the paths of prims that have annotations matching the given strings.
+    Optionally, a custom filter function can be provided, and pruning of subtrees can be enabled.
+
+    This function is 100% compatible with the original behavior when `filter_func` and `prune_subtree` are not provided.
+
+    Note: Prims named "Prototypes" and their children are automatically skipped.
+
+    Args:
+        stage (Usd.Stage): The stage to traverse.
+        annotations (List[str]): A list of annotation strings to match against the prims' annotations (case-insensitive partial match).
+        filter_func (Callable[[Usd.Prim], bool], optional): An optional function that takes a `Usd.Prim` and returns `True` if the prim should be included. Defaults to `None`.
+        prune_subtree (bool, optional): If `True`, and `filter_func` is provided, when `filter_func(prim)` returns `False`, its children are not traversed. Defaults to `False`.
+
+    Returns:
+        List[str]: A list of paths of prims that have matching annotations (and optionally pass the filter function).
+    """
+    result = []
+    iterator = iter(stage.TraverseAll())
+    for prim in iterator:
+        # Skip "Prototypes" prims and their children
+        if prim.GetName() == "Prototypes":
+            iterator.PruneChildren()
+            continue
+            
+        prim_annotation = prim.GetCustomDataByKey("annotation")
+        match_annotation = False
+        if prim_annotation:
+            prim_annotation_lower = str(prim_annotation).lower()
+            match_annotation = any(ann.lower() in prim_annotation_lower for ann in annotations)
+        
+        match_filter = filter_func(prim) if filter_func else True
+
+        if match_annotation and match_filter:
+            result.append(str(prim.GetPath()))
+        if not match_filter and prune_subtree:
+            iterator.PruneChildren()
+    return result
+
+
 def search_visible_prims_by_type(
     stage: Usd.Stage,
     types: List[str],
@@ -277,6 +323,23 @@ def search_visible_prims_by_name(
         List[str]: A list of paths of prims that match the names and are visible.
     """
     return search_prims_by_name(stage, names, filter_valid_and_visible, True, True)
+
+
+def search_visible_prims_by_annotation(
+    stage: Usd.Stage,
+    annotations: List[str],
+) -> List[str]:
+    """
+    Iterates over all prims in the stage and returns the paths of prims that have annotations matching the given strings and are visible.
+
+    Args:
+        stage (Usd.Stage): The stage to traverse.
+        annotations (List[str]): A list of annotation strings to match against the prims' annotations (case-insensitive partial match).
+
+    Returns:
+        List[str]: A list of paths of prims that have matching annotations and are visible.
+    """
+    return search_prims_by_annotation(stage, annotations, filter_valid_and_visible, True)
 
 
 def get_selection() -> List[str]:
@@ -495,6 +558,33 @@ def get_prim_color(
 
     # If no color found, return None
     return None
+
+
+def get_prim_annotation(stage: Usd.Stage, prim_path: str) -> Optional[str]:
+    """
+    Get the annotation for a given prim.
+
+    Args:
+        stage (Usd.Stage): The USD stage containing the prim.
+        prim_path (str): The path to the prim.
+
+    Returns:
+        Optional[str]: The annotation string, or None if no annotation is found.
+
+    Raises:
+        ValueError: If the prim at the given path does not exist.
+    """
+    if isinstance(prim_path, Usd.Prim):
+        # Sometimes it passes a prim instead of a path
+        prim = prim_path
+    else:
+        prim = stage.GetPrimAtPath(prim_path)
+    
+    if not prim.IsValid():
+        raise ValueError(f"Prim at path {prim_path} does not exist.")
+    
+    annotation = prim.GetCustomDataByKey("annotation")
+    return str(annotation) if annotation is not None else None
 
 
 def list_variants(stage: Usd.Stage, prim: Union[Usd.Prim, str], variant_set_name: str):

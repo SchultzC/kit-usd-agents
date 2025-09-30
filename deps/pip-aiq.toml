@@ -1,4 +1,5 @@
 [[dependency]]
+# This file is used to install the pip dependencies for the aiq extension.
 python = "../_build/target-deps/python"
 packages = [
     "aiqtoolkit==1.1.0",
@@ -80,7 +81,7 @@ packages = [
     "zipp==3.21.0",
     "colorama",
 ]
-extra_args = ["--no-deps", "--no-cache-dir"]
+extra_args = ["--no-deps", "--no-cache-dir", "--force-reinstall", "--upgrade", "--ignore-installed", "--use-deprecated=legacy-resolver"]
 target = "../_build/target-deps/pip_aiq_prebundle"
 platforms = ["*"]
 download_only = false

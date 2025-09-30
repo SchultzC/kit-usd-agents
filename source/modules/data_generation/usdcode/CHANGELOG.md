@@ -1,3 +1,6 @@
+## 0.1.15 - 2025-09-10
+- Added search_visible_prims_by_annotation
+
 ## 0.1.14 - 2025-09-04
 - Fixed package URL
 

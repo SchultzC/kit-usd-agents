@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.0.10] - 2025-09-22
+
+### Changed
+- Updated omni.ai.langchain.core dependency to 2.0.8
+
 ## [2.0.9] - 2025-08-22
 - DoubleRunUSDCodeGenInterpreterModifier supports async code
 

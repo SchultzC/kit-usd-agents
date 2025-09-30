@@ -20,7 +20,7 @@ install_requires = req_file("requirements.txt")
 
 setup(
     name="usdcode",
-    version="0.1.14",
+    version="0.1.15",
     author="Omniverse GenAI Team",
     author_email="doyopk-org@exchange.nvidia.com",
     description="Generated USD Meta-functions for LC Agent",

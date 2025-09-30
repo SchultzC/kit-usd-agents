@@ -1,7 +1,29 @@
 # Changelog
 
+## [2.0.20] - 2025-09-23
+
+### Added
+- Image similarity search support in USD Search
+  - Can now search for assets using reference images
+  - Support for image paths with <image(path)> syntax in search queries
+  - Unified search API for both text and image searches
+- Added omni.ai.aiq.stage_builder to app dependencies
+
+### Changed
+- Enhanced USD Search modifier to handle both text and image queries
+- Updated USD Search documentation with image search examples
+- Improved search node prompts for better function call generation
+- Consolidated search implementation to single unified method
+- Code formatting improvements and import cleanup
+
+## [2.0.19] - 2025-09-22
+
+### Changed
+- Updated omni.ai.langchain.agent.usd_code dependency to 2.0.10
+
 ## [2.0.18] - 2025-09-17
 
+### Changed
 - DoubleRunUSDCodeGenInterpreterModifier supports async code
 
 ## [2.0.17] - 2025-09-17

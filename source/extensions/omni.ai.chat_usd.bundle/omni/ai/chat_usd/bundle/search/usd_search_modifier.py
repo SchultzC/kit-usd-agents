@@ -13,6 +13,7 @@ import os
 import re
 import tempfile
 
+import carb
 import carb.settings
 import requests
 from lc_agent import AIMessage, NetworkModifier, RunnableNetwork, RunnableNode
@@ -21,8 +22,6 @@ from .usd_search_node import USDSearchNode
 
 
 def get_api_key():
-    import carb.settings
-
     settings = carb.settings.get_settings()
 
     # Check in order of precedence:
@@ -47,8 +46,6 @@ def get_api_key():
 
 
 def get_username():
-    import carb.settings
-
     settings = carb.settings.get_settings()
 
     # Check in order of precedence:
@@ -64,14 +61,20 @@ def get_username():
 
 class USDSearchModifier(NetworkModifier):
     """USDSearch API Command:
-    @USDSearch(query: str, metadata: bool, limit: int)@
+    @USDSearch(query, metadata: bool, limit: int)@
 
-    Description: Searches the USD API with the given query and parameters.
-    - query: The search query string
+    Description: Searches the USD API with either text or image queries.
+
+    Parameters:
+    - query: Can be either:
+        - A text string for text search: "search terms"
+        - An image path for image search: <image(path)>
     - metadata: Whether to include metadata in the search results (true/false)
     - limit: The maximum number of results to return
 
-    Example: @USDSearch("big box", false, 10)@"""
+    Examples:
+    Text search: @USDSearch("big box", false, 10)@
+    Image search: @USDSearch(<image(/path/to/reference.png)>, false, 10)@"""
 
     def __init__(self, host_url=None, api_key=None, username=None, url_replacements=None, search_path=None):
         """Initialize USDSearchModifier with optional configuration parameters.
@@ -175,17 +178,28 @@ class USDSearchModifier(NetworkModifier):
 
     def on_post_invoke(self, network: "RunnableNetwork", node: RunnableNode):
         output = node.outputs.content if node.outputs else ""
-        matches = re.findall(r'@USDSearch\("(.*?)", (.*?), (\d+)\)@', output)
+
+        # Updated regex to capture both text queries and image queries
+        # This will match both:
+        # @USDSearch("text query", true, 10)@
+        # @USDSearch(<image(path)>, false, 10)@
+        matches = re.findall(r'@USDSearch\((?:"([^"]+)"|<image\(([^)]+)\)>), (.*?), (\d+)\)@', output)
 
         search_results = {}
-        for query, metadata, limit in matches:
+
+        for text_query, image_path, metadata, limit in matches:
             # Cast to proper Python types
             metadata = metadata.lower() == "true"
             limit = int(limit)
 
-            # Call the actual USD Search API
-            api_response = self.usd_search_post(query, metadata, limit)
-            search_results[query] = api_response
+            if text_query:
+                # This is a text search
+                api_response = self.usd_search_post(query=text_query, return_metadata=metadata, limit=limit)
+                search_results[text_query] = api_response
+            elif image_path:
+                # This is an image search - use the unified method with image_path parameter
+                api_response = self.usd_search_post(image_path=image_path, return_metadata=metadata, limit=limit)
+                search_results[f"Image: {image_path}"] = api_response
 
         if search_results:
             search_results_str = json.dumps(search_results, indent=2) + "\n\n"
@@ -198,8 +212,15 @@ class USDSearchModifier(NetworkModifier):
             )
             node >> search_result_node
 
-    def usd_search_post(self, query, return_metadata, limit):
-        """Call the USD Search API with the given query and parameters."""
+    def usd_search_post(self, query=None, return_metadata=False, limit=10, image_path=None):
+        """Call the USD Search API with either text query or image similarity search.
+
+        Args:
+            query: Text search query (used if image_path is None)
+            return_metadata: Whether to include metadata in results
+            limit: Maximum number of results to return
+            image_path: Path to image file for similarity search (if provided, overrides text query)
+        """
         # fixed parameters
         # USD File only for now
         filter = "usd*"
@@ -220,8 +241,8 @@ class USDSearchModifier(NetworkModifier):
             # Use bearer token auth
             headers["Authorization"] = "Bearer {}".format(self._api_key)
 
+        # Build base payload - common fields for both search types
         payload = {
-            "description": query,
             "return_metadata": return_metadata,
             "limit": limit,
             "file_extension_include": filter,
@@ -229,12 +250,31 @@ class USDSearchModifier(NetworkModifier):
             "return_root_prims": False,
         }
 
+        # Determine search type and add specific fields
+        if image_path:
+            # Image similarity search
+            try:
+                with open(image_path, "rb") as image_file:
+                    image_data = image_file.read()
+                    image_base64 = base64.b64encode(image_data).decode("utf-8")
+            except Exception as e:
+                carb.log_error(f"Failed to read image file {image_path}: {str(e)}")
+                return {"error": f"Failed to read image file: {str(e)}"}
+
+            # For image search, use a single base64 string (not a list)
+            payload["image_similarity_search"] = image_base64
+            # Optionally add description for image search if provided
+            if query:
+                payload["description"] = query
+            search_type = "image"
+        else:
+            # Text search
+            payload["description"] = query
+            search_type = "text"
+
         # Add search_path to payload if it's set
         if self._search_path:
             payload["search_path"] = self._search_path
-
-        # Print Windows curl command for debugging
-        import json
 
         # Check if we should print curl commands
         print_curl = self._settings.get("/exts/omni.ai.chat_usd.bundle/print_curl_commands")
@@ -242,8 +282,15 @@ class USDSearchModifier(NetworkModifier):
             print_curl = os.environ.get("USDSEARCH_PRINT_CURL", "").lower() in ["true", "1", "yes"]
 
         if print_curl:
-            payload_json = json.dumps(payload)
-            # Format for Windows command line - use ^ for line continuation
+            # For debugging, show appropriate message and potentially truncated data
+            debug_payload = payload.copy()
+            if search_type == "image":
+                debug_payload["image_similarity_search"] = image_base64[:50] + "..."
+                debug_message = "Windows curl command for image search (image data truncated):"
+            else:
+                debug_message = "Windows curl command (copy and paste):"
+
+            payload_json = json.dumps(debug_payload)
             curl_cmd_parts = [
                 f'curl -X POST "{url}"',
             ]
@@ -251,15 +298,13 @@ class USDSearchModifier(NetworkModifier):
             for header_key, header_value in headers.items():
                 curl_cmd_parts.append(f'  -H "{header_key}: {header_value}"')
 
-            # Escape quotes in JSON payload for Windows command line
             escaped_payload = payload_json.replace('"', '\\"')
             curl_cmd_parts.append(f'  -d "{escaped_payload}"')
 
-            # Join with Windows line continuation
             curl_cmd = " ^\n".join(curl_cmd_parts)
 
             print("\n" + "=" * 60)
-            print("Windows curl command (copy and paste):")
+            print(debug_message)
             print("=" * 60)
             print(curl_cmd)
             print("=" * 60 + "\n")
@@ -274,4 +319,5 @@ class USDSearchModifier(NetworkModifier):
             return filtered_result
 
         except requests.RequestException as e:
-            return {"error": f"API request failed: {str(e)}"}
+            error_prefix = "Image search" if search_type == "image" else "Text search"
+            return {"error": f"{error_prefix} API request failed: {str(e)}"}

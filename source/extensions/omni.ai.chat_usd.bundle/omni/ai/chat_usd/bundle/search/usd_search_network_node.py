@@ -45,8 +45,8 @@ class USDSearchNetworkNode(NetworkNode):
 
         self.metadata[
             "description"
-        ] = """Agent to search and Import Assets.
-Connect to the USD Search NIM to find USD assets base on the natural language query.
+        ] = """Agent to search and Import Assets using text or images.
+Connect to the USD Search NIM to find USD assets based on natural language queries or similar images.
 Drag and drop discovered assets directly into your scene for seamless integration"""
 
         self.metadata["examples"] = [
@@ -54,4 +54,6 @@ Drag and drop discovered assets directly into your scene for seamless integratio
             "Find 3 traffic cones and 2 Boxes",
             "I need 3 office chairs",
             "10 warehouse shelves",
+            "Find assets similar to /path/to/reference/image.png",
+            "Search using this image: C:/Users/example.jpg",
         ]

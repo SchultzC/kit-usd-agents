@@ -1,4 +1,5 @@
 [[dependency]]
+# This file is used to install the pip dependencies for the core extension.
 python = "../_build/target-deps/python"
 packages = [
     "source/modules/lc_agent",
@@ -10,7 +11,6 @@ packages = [
     "blobfile",
     "faiss-cpu==1.9.0",
     "fastapi",
-    "jiter==0.10.0",
     "langchain-nvidia-ai-endpoints",
     "langchain-openai",
     "numpy==1.26.0",
@@ -18,7 +18,7 @@ packages = [
     "uvicorn",
 ]
 extra_args = ["--no-cache-dir", "--force-reinstall", "--upgrade", "--ignore-installed"]
-target = "../_build/target-deps/pip_core_prebundle" # This folder will be linked into 'omni.ai.langchain.core' extension (see premake file)
+target = "../_build/target-deps/pip_core_prebundle"
 platforms = ["*"]
 download_only = false
 append_to_install_folder = true

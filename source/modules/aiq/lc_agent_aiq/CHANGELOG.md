@@ -2,6 +2,9 @@
 
 All notable changes to the lc_agent_aiq module will be documented in this file.
 
+## [0.1.10] - 2025-09-22
+- support data:image url in message
+
 ## [0.1.9] - 2025-09-04
 - Fixed package URL
 

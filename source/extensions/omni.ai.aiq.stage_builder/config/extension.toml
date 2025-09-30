@@ -1,5 +1,5 @@
 [package]
-version = "0.1.2"
+version = "0.1.3"
 authors = ["NVIDIA"]
 title = "Stage Builder - Multi-Agent USD Scene Builder"
 description = "Multi-agent system for intelligent USD stage creation using coordinated agents for design, layout, and asset placement."
