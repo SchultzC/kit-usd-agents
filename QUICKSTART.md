@@ -141,6 +141,8 @@ The server will start at `http://localhost:9901/mcp`
 
 ### Claude Code CLI
 
+> **Tip:** This repository includes a `CLAUDE.md` file that automatically provides Claude Code with project context, architecture guidance, and development conventions.
+
 Add the MCP servers using the `claude mcp add` command:
 
 ```bash

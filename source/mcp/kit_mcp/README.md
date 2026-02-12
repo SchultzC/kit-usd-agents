@@ -500,7 +500,9 @@ To avoid conflicts when running multiple MCP servers:
 - **usd-code-mcp**: Port 9903
 - **isaacsim-mcp**: Port 9904
 
-## Integration with Cursor IDE
+## Integration with AI Coding Assistants
+
+### Cursor IDE
 
 Create a `.cursor/mcp.json` file in your **project/workspace root**:
 
@@ -521,6 +523,14 @@ EOF
 ```
 
 After creating the file, **reload Cursor** (Cmd/Ctrl+Shift+P → "Developer: Reload Window").
+
+### Claude Code
+
+Add the MCP server using the CLI:
+
+```bash
+claude mcp add --transport http kit-mcp http://localhost:9902/mcp
+```
 
 > **Note:** NAT 1.3+ uses streamable-http at `/mcp` instead of SSE at `/sse`.
 
