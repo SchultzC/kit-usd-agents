@@ -15,11 +15,12 @@
 # limitations under the License.
 
 # Add or remove Kit USD Agents MCP servers from the Claude Code CLI
-# user-level configuration (~/.claude.json).
+# user-level configuration (~/.claude.json) so they are available
+# across all repositories.
 #
 # Usage:
-#   ./configure_claude_mcps.sh add      # Register all MCP servers
-#   ./configure_claude_mcps.sh remove   # Unregister all MCP servers
+#   ./configure_claude_mcps.sh add      # Register all MCP servers (user-level)
+#   ./configure_claude_mcps.sh remove   # Unregister all MCP servers (user-level)
 set -e
 
 # ---------------------------------------------------------------------------
@@ -85,7 +86,7 @@ if [ "$ACTION" = "add" ]; then
         name="${SERVER_NAMES[$i]}"
         url="${SERVER_URLS[$i]}"
         echo_info "Adding $name -> $url"
-        claude mcp add --transport http "$name" "$url"
+        claude mcp add --scope user --transport http "$name" "$url"
     done
     echo ""
     echo_info "All MCP servers registered with Claude Code."
@@ -96,7 +97,7 @@ elif [ "$ACTION" = "remove" ]; then
     echo ""
     for name in "${SERVER_NAMES[@]}"; do
         echo_info "Removing $name"
-        claude mcp remove "$name" 2>/dev/null || echo_warn "  $name was not registered (or already removed)."
+        claude mcp remove --scope user "$name" 2>/dev/null || echo_warn "  $name was not registered (or already removed)."
     done
     echo ""
     echo_info "All MCP servers unregistered from Claude Code."
